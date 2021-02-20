@@ -15,18 +15,16 @@ func Program(c *gin.Context) {
 		tvdata := service.ProgramFromDB(kw, ac)
 		if len(tvdata) != 0 {
 			data := map[string]interface{}{
-				"ori_url":  tvdata["yahoourl"],
-				"entities": tvdata["proginfo"],
+				"entities": tvdata["prog_info"],
 				"cache":    true,
 			}
 			DataHandler(c, 0, "Program information", data)
 			// 从远程抓取数据
 		} else {
-			tvurl, tvinfo := service.YahooTV(kw, ac)
+			tvinfo := service.YahooTV(kw, ac)
 			if len(tvinfo) != 0 {
-				service.Program2DB(kw, ac, tvurl, tvinfo)
+				service.Program2DB(kw, ac, tvinfo)
 				data := map[string]interface{}{
-					"ori_url":  tvurl,
 					"entities": tvinfo,
 				}
 				DataHandler(c, 0, "Program information", data)

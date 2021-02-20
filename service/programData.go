@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/antchfx/htmlquery"
+	"fmt"
 	"qmaru-api/utils"
-	"strings"
+	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,7 +12,6 @@ import (
 type programJSON struct {
 	Keyword   string              `bson:"keyword"`
 	AreaCode  string              `bson:"area_code"`
-	YahooURL  string              `bson:"yahoo_url"`
 	ProgInfo  []map[string]string `bson:"prog_info"`
 	CreatedAt time.Time           `bson:"created_at"`
 }
@@ -22,7 +21,7 @@ func ProgramFromDB(kw, ac string) (data map[string]interface{}) {
 	programColl := DataBase.Collection("program_info")
 	fData := bson.D{
 		{Key: "keyword", Value: kw},
-		{Key: "areacode", Value: ac},
+		{Key: "area_code", Value: ac},
 	}
 	programData := MFind(programColl, 0, 0, fData)
 	if len(programData) != 0 {
@@ -34,62 +33,68 @@ func ProgramFromDB(kw, ac string) (data map[string]interface{}) {
 }
 
 // Program2DB 保存 Program 的数据
-func Program2DB(kw, ac, tvurl string, tvinfo []map[string]string) {
+func Program2DB(kw, ac string, tvinfo []map[string]string) {
 	programColl := DataBase.Collection("program_info")
 	var pdata programJSON
 	pdata.Keyword = kw
 	pdata.AreaCode = ac
-	pdata.YahooURL = tvurl
 	pdata.ProgInfo = tvinfo
 	pdata.CreatedAt = time.Now()
 	MInsertOne(programColl, pdata)
 }
 
 // YahooTV 获取 YahooTV 数据
-func YahooTV(kw, code string) (tvurl string, tvinfo []map[string]string) {
+func YahooTV(kw, code string) (tvinfo []map[string]string) {
 	yahooSite := "https://tv.yahoo.co.jp"
-	apiURL := yahooSite + "/search/category/"
+	url := yahooSite + "/api/adapter"
 
 	headers := utils.MiniHeaders{
-		"User-Agent": utils.UserAgent,
+		"User-Agent":  utils.UserAgent,
+		"target-api":  "mindsSiQuery",
+		"target-path": "/TVWebService/V2/contents",
 	}
 
 	data := utils.MiniFormData{
-		"q":   kw,
-		"a":   code,
-		"oa":  "1",
-		"tv":  "1",
-		"bsd": "1",
+		"query":              kw,
+		"siTypeId":           "1 3",
+		"majorGenreId":       "",
+		"areaId":             code,
+		"duration":           "",
+		"element":            "",
+		"broadCastStartDate": "",
+		"broadCastEndDate":   "",
+		"start":              "0",
+		"results":            "10",
+		"sort":               "+broadCastStartDate",
 	}
 
-	utils.Minireq.NoRedirect()
-	tRes := utils.Minireq.Post(apiURL, headers, data)
-	tLocation, _ := tRes.RawRes.Location()
-	tRealURL := tLocation.String()
-	res := utils.Minireq.Get(tRealURL)
-	tvurl = tRealURL
+	res := utils.Minireq.Post(url, headers, data)
+	resJSON := res.RawJSON()
 
-	doc, _ := htmlquery.Parse(strings.NewReader(string(res.RawData())))
-	nodes := htmlquery.Find(doc, `//ul[@class="programlist"]/li`)
-	for _, node := range nodes {
-		d := make(map[string]string)
-		emTag := htmlquery.Find(node, `./div[@class="leftarea"]/p/em`)
-		udate := htmlquery.InnerText(emTag[0])
-		utime := htmlquery.InnerText(emTag[1])
+	tvData := resJSON.(map[string]interface{})
 
-		aTag := htmlquery.FindOne(node, `./div[@class="rightarea"]/p[1]/a`)
-		title := htmlquery.InnerText(aTag)
-		yurl := htmlquery.SelectAttr(aTag, "href")
+	tvResultSet := tvData["ResultSet"].(map[string]interface{})
+	tvResults := tvResultSet["Result"].([]interface{})
 
-		spanTag := htmlquery.FindOne(node, `./div[@class="rightarea"]/p[2]/span[1]`)
-		station := htmlquery.InnerText(spanTag)
+	for _, result := range tvResults {
+		tmp := make(map[string]string)
+		tvRes := result.(map[string]interface{})
+		startDateF := tvRes["broadCastStartDate"].(float64)
+		endDateF := tvRes["broadCastEndDate"].(float64)
 
-		d["date"] = udate
-		d["time"] = utime
-		d["url"] = yahooSite + yurl
-		d["title"] = title
-		d["station"] = station
-		tvinfo = append(tvinfo, d)
+		startDate := strconv.FormatFloat(startDateF, 'f', -1, 64)
+		endDate := strconv.FormatFloat(endDateF, 'f', -1, 64)
+
+		tvStartDate := utils.TimeSuite.Unix2String("01/02 15:04", startDate)
+		tvEndDate := utils.TimeSuite.Unix2String("15:04", endDate)
+
+		tmp["station"] = tvRes["serviceName"].(string)
+		tmp["type"] = tvRes["siTypeName"].(string)
+		tmp["title"] = tvRes["title"].(string)
+		tmp["url"] = fmt.Sprintf("%s/program/%s", yahooSite, tvRes["contentsId"].(string))
+		tmp["date"] = fmt.Sprintf("%s ~ %s", tvStartDate, tvEndDate)
+
+		tvinfo = append(tvinfo, tmp)
 	}
 	return
 }
