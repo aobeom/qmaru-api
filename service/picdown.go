@@ -131,15 +131,12 @@ func mdprAPI(url string) (imgs []interface{}) {
 		AWS-Lambda and AWS-API-Gateway
 		Use dynamic IP to prevent excessive frequency
 	*/
+	if strings.Contains(url, "photo") {
+		return
+	}
 	awsCfg := config.AwsCfg()["api-gateway"].(string)
 	awsAPI := awsCfg + "/prod/mdpr?url=" + url
 	realURL := strings.ReplaceAll(awsAPI, "?update", "")
-	if strings.Contains(realURL, "photo") {
-		return
-	}
-	// response := utils.Minireq.GetBody(realURL, nil, nil)
-	// imgs = utils.DataConvert.String2Array(response)
-
 	res := utils.Minireq.Get(realURL)
 	imgs = utils.DataSuite.RawArray2Array(res.RawData())
 	return
