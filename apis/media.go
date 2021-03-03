@@ -88,7 +88,7 @@ func Media(c *gin.Context) {
 			}
 			DataHandler(c, 0, "This is a Y2B Video url", data)
 		} else {
-			DataHandler(c, 1, "This url has no video", []interface{}{})
+			DataHandler(c, 1, "This url has no video [<200M]", []interface{}{})
 		}
 	default:
 		DataHandler(c, 1, "The type is not supported", []interface{}{})
