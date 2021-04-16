@@ -1,6 +1,8 @@
 package service
 
 import (
+	"log"
+	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
@@ -144,79 +146,20 @@ func mdprAPI(url string) (imgs []interface{}) {
 
 // igAPI 抓取网页版数据
 func igAPI(url string) (imgs []interface{}) {
-	headers := utils.MiniHeaders{
-		"User-Agent": utils.UserAgent,
+	var extCfg = config.ExtCfg()
+	var pyext = extCfg["pyext"].(map[string]interface{})
+	var pypath = pyext["path"].(string)
+	var pyfiles = pyext["files"].(map[string]interface{})
+	var pyy2b = pyfiles["ig"].(string)
+	cmd := exec.Command(pypath, pyy2b, url)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Panic("cmd.Run() failed", err)
 	}
+	results := strings.TrimSpace(string(out))
 
-	res := utils.Minireq.Get(url, headers)
-	igRule := regexp.MustCompile(`<script type="text/javascript">window._sharedData = (.*?);</script>`)
-	igRawData := igRule.FindAllStringSubmatch(string(res.RawData()), -1)
-	if len(igRawData) != 0 {
-		igRawDataString := igRawData[0][1]
-		igData := utils.DataSuite.RawMap2Map([]byte(igRawDataString))
-
-		igEntryData := igData["entry_data"].(map[string]interface{})
-		igPostPage := igEntryData["PostPage"].([]interface{})
-		igGraphqlList := igPostPage[0].(map[string]interface{})
-		igGraphql := igGraphqlList["graphql"].(map[string]interface{})
-
-		if _, ok := igGraphql["shortcode_media"]; ok {
-			igCore := igGraphql["shortcode_media"].(map[string]interface{})
-			// 图片视频混排
-			if _, ok := igCore["edge_sidecar_to_children"]; ok {
-				igSidecar := igCore["edge_sidecar_to_children"].(map[string]interface{})
-				igEdges := igSidecar["edges"].([]interface{})
-				for i := 0; i < len(igEdges); i++ {
-					igContent := igEdges[i].(map[string]interface{})
-					igNode := igContent["node"].(map[string]interface{})
-					if igNode["__typename"].(string) == "GraphImage" {
-						imgs = append(imgs, igNode["display_url"])
-					} else if igNode["__typename"].(string) == "GraphVideo" {
-						imgs = append(imgs, igNode["video_url"])
-					}
-				}
-				// 只有视频
-			} else if _, ok := igCore["video_url"]; ok {
-				igVideoURL := igCore["video_url"]
-				imgs = append(imgs, igVideoURL)
-				// 单图片或单视频
-			} else {
-				igType := igCore["is_video"].(bool)
-				if igType {
-					igNode := igCore["video_url"]
-					imgs = append(imgs, igNode)
-				} else {
-					igNode := igCore["display_url"]
-					imgs = append(imgs, igNode)
-				}
-			}
-		} else {
-			imgs = []interface{}{}
-		}
-	} else {
-		imgs = []interface{}{}
-	}
-	return
-}
-
-// igAPIWorker
-func igAPIWorker(url string) (imgs []interface{}) {
-	defer func() {
-		if err := recover(); err != nil {
-			return
-		}
-	}()
-	rURL := "https://ins.maruq.workers.dev/?url=" + url
-	res := utils.Minireq.Get(rURL)
-	resJSON := res.RawJSON()
-	if resJSON != nil {
-		data := resJSON.(map[string]interface{})
-		if _, ok := data["data"]; ok {
-			imgs = data["data"].([]interface{})
-			return
-		}
-	}
-	return
+	urls := utils.DataSuite.RawArray2Array([]byte(results))
+	return urls
 }
 
 // imgURLAnalysis 读取 img 标签
@@ -290,8 +233,7 @@ func PicData(urlType, url string) (imgs []interface{}) {
 	case strings.Contains(urlType, "ameblo"):
 		imgs = abemaAPI(url)
 	case strings.Contains(urlType, "instagram"):
-		// imgs = igAPI(url)
-		imgs = igAPIWorker(url)
+		imgs = igAPI(url)
 	case strings.Contains(urlType, "thetv"):
 		aRule := "//ul[@class='list_thumbnail']/li/a[@alt]"
 		imgRule := "//figure/a/img|//figure/img"
