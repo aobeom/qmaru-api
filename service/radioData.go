@@ -25,8 +25,6 @@ const (
 	XRadikoAppVersion = "0.0.1"
 )
 
-var miniReq = utils.Minireq
-
 // DLServer 下载控制器
 type DLServer struct {
 	WG    sync.WaitGroup
@@ -201,9 +199,9 @@ func rEngine(urls []string, savePath string) {
 		if num == int(total) {
 			break
 		}
-		tmp, _ := <-d
+		tmp := <-d
 		offset, _ := aacFile.Seek(0, 2)
-		_, _ = aacFile.WriteAt(tmp, offset)
+		aacFile.WriteAt(tmp, offset)
 		num++
 	}
 
@@ -259,7 +257,7 @@ func RadioGet(fileName, station, startAt, endAt string) (dlurl string) {
 			mediaInfo := config.MediaCfg()
 			mediaPath := mediaInfo["media_path"].(string)
 			wwwPath := mediaInfo["www_path"].(string)
-	
+
 			savePath := filepath.Join(mediaPath, fileName)
 			rEngine(aacURLs, savePath)
 			dlurl = filepath.Join(wwwPath, fileName)

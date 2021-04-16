@@ -134,7 +134,7 @@ func mdprAPI(url string) (imgs []interface{}) {
 	if strings.Contains(url, "photo") {
 		return
 	}
-	awsCfg := config.AwsCfg()["api-gateway"].(string)
+	awsCfg := config.ExtCfg()["api-gateway"].(string)
 	awsAPI := awsCfg + "/prod/mdpr?url=" + url
 	realURL := strings.ReplaceAll(awsAPI, "?update", "")
 	res := utils.Minireq.Get(realURL)

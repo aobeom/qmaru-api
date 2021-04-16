@@ -36,8 +36,8 @@ func TweetCfg() (d map[string]interface{}) {
 	return
 }
 
-// AwsCfg aws 网关
-func AwsCfg() (d map[string]interface{}) {
+// ExtCfg 外部调用配置
+func ExtCfg() (d map[string]interface{}) {
 	d = readCfg("extapi.json")
 	return
 }

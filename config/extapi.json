@@ -1,7 +1,9 @@
 {
     "api-gateway": "",
-    "youtube": {
-        "exec": "",
-        "file": ""
+    "pyext": {
+        "path": "",
+        "files": {
+            "youtube": ""
+        }
     }
 }
