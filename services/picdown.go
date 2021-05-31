@@ -1,25 +1,20 @@
-package service
+package services
 
 import (
+	"fmt"
 	"log"
 	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
-	"qmaru-api/config"
+	"qmaru-api/configs"
+	"qmaru-api/models"
 	"qmaru-api/utils"
 
 	"github.com/antchfx/htmlquery"
-	"go.mongodb.org/mongo-driver/bson"
 )
-
-type mediaJSON struct {
-	Type    string
-	Website string
-	URL     string
-	Source  interface{}
-}
 
 // TaskManage 控制并发
 type taskManage struct {
@@ -28,30 +23,44 @@ type taskManage struct {
 	Data  []interface{}
 }
 
-// Media2FromDB 读取 media 数据
-func Media2FromDB(url string) (data map[string]interface{}) {
-	mediaColl := DataBase.Collection("media_info")
-	fData := bson.D{
-		{Key: "url", Value: url},
+// MediaFromDB 读取 media 数据
+func MediaFromDB(url string) (data map[string]interface{}, counts int) {
+	data = make(map[string]interface{})
+
+	sql := fmt.Sprintf("SELECT type, website, url, source FROM %s WHERE url=$1", models.MediaInfoTable)
+	row := models.Psql.QueryOne(sql, url)
+
+	var mtype string
+	var mwebsite string
+	var murl string
+	var msource models.QMediaArray
+
+	row.Scan(&mtype, &mwebsite, &murl, &msource)
+	if mtype != "" {
+		data = map[string]interface{}{
+			"type":    mtype,
+			"website": mwebsite,
+			"url":     murl,
+			"source":  msource,
+		}
 	}
-	mediaData := MFind(mediaColl, 0, 0, fData)
-	if len(mediaData) != 0 {
-		data = mediaData[0]
-	} else {
-		data = map[string]interface{}{}
-	}
+	counts = len(msource)
 	return
 }
 
 // Media2DB 保存 media 的数据
 func Media2DB(mtype, website, url string, sources interface{}) {
-	mediaColl := DataBase.Collection("media_info")
-	var mdata mediaJSON
-	mdata.Type = mtype
-	mdata.Website = website
-	mdata.URL = url
-	mdata.Source = sources
-	MInsertOne(mediaColl, mdata)
+	sql := fmt.Sprintf("INSERT INTO %s (created_at,updated_at,type,website,url,source) VALUES ($1,$2,$3,$4,$5,$6)", models.MediaInfoTable)
+
+	createdat := int(time.Now().Unix())
+	updatedat := int(time.Now().Unix())
+
+	var newSources models.QMediaArray
+	for _, source := range sources.([]interface{}) {
+		newSources = append(newSources, source.(string))
+	}
+
+	models.Psql.Exec(sql, createdat, updatedat, mtype, website, url, newSources)
 }
 
 // PicURLCheck 检查适配类型
@@ -136,7 +145,7 @@ func mdprAPI(url string) (imgs []interface{}) {
 	if strings.Contains(url, "photo") {
 		return
 	}
-	awsCfg := config.ExtCfg()["api-gateway"].(string)
+	awsCfg := configs.ExtCfg()["api-gateway"].(string)
 	awsAPI := awsCfg + "/prod/mdpr?url=" + url
 	realURL := strings.ReplaceAll(awsAPI, "?update", "")
 	res := utils.Minireq.Get(realURL)
@@ -146,7 +155,7 @@ func mdprAPI(url string) (imgs []interface{}) {
 
 // igAPI 抓取网页版数据
 func igAPI(url string) (imgs []interface{}) {
-	var extCfg = config.ExtCfg()
+	var extCfg = configs.ExtCfg()
 	var pyext = extCfg["pyext"].(map[string]interface{})
 	var pypath = pyext["path"].(string)
 	var pyfiles = pyext["files"].(map[string]interface{})

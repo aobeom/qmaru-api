@@ -2,9 +2,9 @@ package main
 
 import (
 	"qmaru-api/apis"
-	"qmaru-api/config"
+	"qmaru-api/configs"
 )
 
 func main() {
-	apis.Run(config.Deployment())
+	apis.Run(configs.Deployment())
 }

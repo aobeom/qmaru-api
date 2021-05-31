@@ -1,15 +1,15 @@
 package apis
 
 import (
-	"qmaru-api/service"
+	"qmaru-api/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 // STchannel ST Movie
 func STchannel(c *gin.Context) {
-	stutime := service.CronTime("stchannel")
-	stData := service.STData()
+	stutime := services.CronTime("stchannel")
+	stData := services.STData()
 	// 从数据库获取数据
 	if len(stData) != 0 {
 		data := map[string]interface{}{

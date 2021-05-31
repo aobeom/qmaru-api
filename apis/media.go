@@ -2,8 +2,9 @@ package apis
 
 import (
 	"fmt"
-	"qmaru-api/service"
 	"strings"
+
+	"qmaru-api/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +15,7 @@ func Media(c *gin.Context) {
 	url := c.Query("url")
 	switch mtype {
 	case "news":
-		urlMatch, urlType := service.PicURLCheck(url)
+		urlMatch, urlType := services.PicURLCheck(url)
 		if urlMatch {
 			// 是否强制更新数据
 			urlUpdate := strings.Split(url, "?")
@@ -23,24 +24,23 @@ func Media(c *gin.Context) {
 				updateFlag = true
 			}
 			// 从数据库获取数据
-			sources := service.Media2FromDB(url)
-			if len(sources) != 0 && updateFlag == false {
+			sources, counts := services.MediaFromDB(url)
+			if len(sources) != 0 && !updateFlag {
 				imgURLs := sources["source"]
-				imgCounts := len(imgURLs.([]interface{}))
 
 				data := map[string]interface{}{
 					"type":     mtype,
 					"entities": imgURLs,
 					"cache":    true,
 				}
-				DataHandler(c, 0, fmt.Sprintf("The news has a total of %d pictures", imgCounts), data)
+				DataHandler(c, 0, fmt.Sprintf("The news has a total of %d pictures", counts), data)
 				// 从远程抓取数据
 			} else if len(sources) == 0 || updateFlag == true {
 				// 去掉 ?update 后缀的真实地址
 				newurl := urlUpdate[0]
-				imgURLs := service.PicData(urlType, newurl)
+				imgURLs := services.PicData(urlType, newurl)
 				if len(imgURLs) != 0 {
-					service.Media2DB(mtype, urlType, newurl, imgURLs)
+					services.Media2DB(mtype, urlType, newurl, imgURLs)
 					imgCounts := len(imgURLs)
 
 					data := map[string]interface{}{
@@ -57,7 +57,7 @@ func Media(c *gin.Context) {
 		}
 	case "twitter":
 		// 从数据库获取数据
-		sources := service.Media2FromDB(url)
+		sources, _ := services.MediaFromDB(url)
 		if len(sources) != 0 {
 			data := map[string]interface{}{
 				"type":     mtype,
@@ -67,9 +67,10 @@ func Media(c *gin.Context) {
 			DataHandler(c, 0, "This is a Twitter Video url", data)
 			// 从远程抓取数据
 		} else {
-			tweetVideoURL := service.TweetVideo(url)
+			tweetVideoData := services.TweetVideo(url)
+			tweetVideoURL := tweetVideoData[0].(string)
 			if tweetVideoURL != "" {
-				service.Media2DB(mtype, "twitter.com", url, tweetVideoURL)
+				services.Media2DB(mtype, "twitter.com", url, tweetVideoData)
 				data := map[string]interface{}{
 					"type":     mtype,
 					"entities": tweetVideoURL,
@@ -80,7 +81,7 @@ func Media(c *gin.Context) {
 			}
 		}
 	case "y2b":
-		filename := service.Y2BDownload(url)
+		filename := services.Y2BDownload(url)
 		if strings.Contains(filename, ".mp4") {
 			data := map[string]interface{}{
 				"type":     mtype,

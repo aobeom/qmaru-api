@@ -1,13 +1,14 @@
-package service
+package services
 
 import (
 	"log"
 	"os/exec"
-	"qmaru-api/config"
 	"strings"
+
+	"qmaru-api/configs"
 )
 
-var extCfg = config.ExtCfg()
+var extCfg = configs.ExtCfg()
 var pyext = extCfg["pyext"].(map[string]interface{})
 var pypath = pyext["path"].(string)
 var pyfiles = pyext["files"].(map[string]interface{})

@@ -1,20 +1,22 @@
-package service
+package services
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"qmaru-api/config"
-	"qmaru-api/utils"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"qmaru-api/configs"
+	"qmaru-api/models"
+	"qmaru-api/utils"
 )
 
 // Common Header 公共头
@@ -211,27 +213,32 @@ func rEngine(urls []string, savePath string) {
 
 // RadioFromDB 读取 Radio 的数据
 func RadioFromDB(name string) (data map[string]interface{}) {
-	radikoColl := DataBase.Collection("radiko")
-	fData := bson.D{
-		{Key: "name", Value: name},
-	}
-	radikoData := MFind(radikoColl, 0, 0, fData)
-	if len(radikoData) != 0 {
-		data = radikoData[0]
-	} else {
-		data = map[string]interface{}{}
+	data = make(map[string]interface{})
+
+	sql := fmt.Sprintf("SELECT name,url FROM %s WHERE name=$1", models.RadikoInfoTable)
+
+	row := models.Psql.QueryOne(sql, name)
+	var rname string
+	var rurl string
+	row.Scan(&rname, &rurl)
+
+	if rname != "" {
+		data = map[string]interface{}{
+			"name": rname,
+			"url":  rurl,
+		}
 	}
 	return
 }
 
 // Radio2DB 保存 Radio 的数据
 func Radio2DB(name, url string) {
-	radikoColl := DataBase.Collection("radiko")
-	rdata := radioJSON{
-		Name: name,
-		URL:  url,
-	}
-	MInsertOne(radikoColl, rdata)
+	sql := fmt.Sprintf("INSERT INTO %s (created_at,updated_at,name,url) VALUES ($1,$2,$3,$4)", models.RadikoInfoTable)
+
+	createdat := int(time.Now().Unix())
+	updatedat := int(time.Now().Unix())
+
+	models.Psql.Exec(sql, createdat, updatedat, name, url)
 }
 
 // RadioGet 获取 Radio 的数据
@@ -254,7 +261,7 @@ func RadioGet(fileName, station, startAt, endAt string) (dlurl string) {
 	if area != "OUT" {
 		aacURLs := radikoHLS(token, area, radioData)
 		if len(aacURLs) != 0 {
-			mediaInfo := config.MediaCfg()
+			mediaInfo := configs.MediaCfg()
 			mediaPath := mediaInfo["media_path"].(string)
 			wwwPath := mediaInfo["www_path"].(string)
 

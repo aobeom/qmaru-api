@@ -2,8 +2,9 @@ package apis
 
 import (
 	"fmt"
-	"qmaru-api/service"
 	"time"
+
+	"qmaru-api/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +37,7 @@ func Drama(c *gin.Context) {
 	if allowdRes {
 		// 获取执行时间和更新时间
 		if dtype == "time" {
-			ctime := service.CronTime("drama")
+			ctime := services.CronTime("drama")
 			if ctime != "" {
 				countdown := timeCalc(ctime)
 				data := map[string]interface{}{
@@ -49,7 +50,7 @@ func Drama(c *gin.Context) {
 			}
 			// 获取对应组的列表
 		} else {
-			dramaData := service.DaramaData(dtype)
+			dramaData := services.DaramaData(dtype)
 			if len(dramaData) != 0 {
 				data := map[string]interface{}{
 					"name":     dtype,

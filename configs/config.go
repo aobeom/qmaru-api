@@ -1,12 +1,13 @@
-package config
+package configs
 
 import (
 	"log"
 	"path/filepath"
+
 	"qmaru-api/utils"
 )
 
-var cfgRoot = "config"
+var cfgRoot = "configs"
 
 func readCfg(name string) (d map[string]interface{}) {
 	cfgPath := filepath.Join(utils.FileSuite.LocalPath(Deployment()), cfgRoot, name)

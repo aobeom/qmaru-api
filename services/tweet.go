@@ -1,9 +1,9 @@
-package service
+package services
 
 import (
 	"strings"
 
-	"qmaru-api/config"
+	"qmaru-api/configs"
 	"qmaru-api/utils"
 )
 
@@ -70,8 +70,8 @@ func tweetData(statusID, token string) (vurl string) {
 }
 
 // TweetVideo 获取 Tweet 视频
-func TweetVideo(url string) (vurl string) {
-	cfg := config.TweetCfg()
+func TweetVideo(url string) (vurl []interface{}) {
+	cfg := configs.TweetCfg()
 	token := cfg["token"].(string)
 	if token == "" {
 		key := cfg["twitter_key"].(string)
@@ -80,7 +80,9 @@ func TweetVideo(url string) (vurl string) {
 	}
 
 	statusID := tweetStatusID(url)
-	vurl = tweetData(statusID, token)
-
+	turl := tweetData(statusID, token)
+	vurl = []interface{}{
+		turl,
+	}
 	return
 }

@@ -5,10 +5,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"qmaru-api/service"
-	"qmaru-api/utils"
 	"strings"
 	"time"
+
+	"qmaru-api/models"
+	"qmaru-api/utils"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -76,7 +77,7 @@ func Logger(debug bool) gin.HandlerFunc {
 func Run(debug bool) {
 	listenAddr := "localhost:8373"
 
-	service.DBTest()
+	models.DBPing()
 	log.Println("Listen: " + listenAddr)
 
 	if debug {
@@ -100,7 +101,6 @@ func Run(debug bool) {
 	{
 		v1.GET("/media/:type", Media)
 		v1.GET("/drama/:type", Drama)
-		v1.GET("/program", Program)
 		v1.GET("/stchannel", STchannel)
 		v1.POST("/radiko", Radiko)
 	}

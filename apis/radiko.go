@@ -2,7 +2,8 @@ package apis
 
 import (
 	"fmt"
-	"qmaru-api/service"
+
+	"qmaru-api/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,20 +29,21 @@ func Radiko(c *gin.Context) {
 	if station != "" && startAt != "" && endAt != "" {
 		// 从数据库获取数据
 		fileName := fmt.Sprintf("Radiko.%s.%s.%s.raw.aac", station, startAt, endAt)
-		rData := service.RadioFromDB(fileName)
+		rData := services.RadioFromDB(fileName)
 		if len(rData) != 0 {
 			data := map[string]interface{}{
 				"entities": map[string]interface{}{
 					"name": rData["name"],
 					"url":  rData["url"],
+					"cache":    true,
 				},
 			}
 			DataHandler(c, 0, station, data)
 			// 从远程抓取数据
 		} else {
-			dlurl := service.RadioGet(fileName, station, startAt, endAt)
+			dlurl := services.RadioGet(fileName, station, startAt, endAt)
 			if dlurl != "" {
-				service.Radio2DB(fileName, dlurl)
+				services.Radio2DB(fileName, dlurl)
 				data := map[string]interface{}{
 					"entities": map[string]interface{}{
 						"name": fileName,
