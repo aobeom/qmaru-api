@@ -44,11 +44,6 @@ type RadioData struct {
 	rtype     string
 }
 
-type radioJSON struct {
-	Name string
-	URL  string
-}
-
 // encodeKey 根据偏移长度生成 KEY
 func encodeKey(authkey string, offset int64, length int64) (partialkey string) {
 	reader := strings.NewReader(authkey)
