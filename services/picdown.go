@@ -2,8 +2,6 @@ package services
 
 import (
 	"fmt"
-	"log"
-	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
@@ -156,19 +154,17 @@ func mdprAPI(url string) (imgs []interface{}) {
 // igAPI 抓取网页版数据
 func igAPI(url string) (imgs []interface{}) {
 	var extCfg = configs.ExtCfg()
-	var pyext = extCfg["pyext"].(map[string]interface{})
-	var pypath = pyext["path"].(string)
-	var pyfiles = pyext["files"].(map[string]interface{})
-	var pyy2b = pyfiles["ig"].(string)
-	cmd := exec.Command(pypath, pyy2b, url)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Panic("cmd.Run() failed", err)
-	}
-	results := strings.TrimSpace(string(out))
+	var apiURL = extCfg["api-ig"].(string)
 
-	urls := utils.DataSuite.RawArray2Array([]byte(results))
-	return urls
+	params := utils.MiniParams{"url": url}
+	res := utils.Minireq.Get(apiURL, params)
+
+	resJSON := res.RawJSON().(map[string]interface{})
+	if resJSON["status"].(float64) == 1 {
+		imgs = resJSON["data"].([]interface{})
+		return
+	}
+	return
 }
 
 // imgURLAnalysis 读取 img 标签

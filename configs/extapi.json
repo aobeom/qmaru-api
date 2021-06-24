@@ -1,10 +1,10 @@
 {
     "api-gateway": "",
+    "api-ig": "",
     "pyext": {
-        "path": "python",
+        "path": "",
         "files": {
-            "youtube": "",
-            "ig": ""
+            "youtube": ""
         }
     }
 }

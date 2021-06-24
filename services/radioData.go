@@ -3,9 +3,9 @@ package services
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	// "io/ioutil"
 	"log"
-	"net/http"
+	// "net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -57,17 +57,17 @@ func encodeKey(authkey string, offset int64, length int64) (partialkey string) {
 }
 
 // radikoJSKey 提取 JS 的密钥
-func radikoJSKey(client http.Client) (authkey string) {
-	playerURL := "http://radiko.jp/apps/js/playerCommon.js"
-	req, _ := http.NewRequest("GET", playerURL, nil)
-	req.Header.Add("User-Agent", utils.UserAgent)
-	res, _ := client.Do(req)
-	body, _ := ioutil.ReadAll(res.Body)
-	regKeyRule := regexp.MustCompile(`[0-9a-z]{40}`)
-	authkeyMap := regKeyRule.FindAllString(string(body), -1)
-	authkey = authkeyMap[0]
-	return
-}
+// func radikoJSKey(client http.Client) (authkey string) {
+// 	playerURL := "http://radiko.jp/apps/js/playerCommon.js"
+// 	req, _ := http.NewRequest("GET", playerURL, nil)
+// 	req.Header.Add("User-Agent", utils.UserAgent)
+// 	res, _ := client.Do(req)
+// 	body, _ := ioutil.ReadAll(res.Body)
+// 	regKeyRule := regexp.MustCompile(`[0-9a-z]{40}`)
+// 	authkeyMap := regKeyRule.FindAllString(string(body), -1)
+// 	authkey = authkeyMap[0]
+// 	return
+// }
 
 // radikoChunklist 提取播放地址
 func radikoChunklist(playlist string) (url string) {
