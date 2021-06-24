@@ -35,7 +35,7 @@ func Media(c *gin.Context) {
 				}
 				DataHandler(c, 0, fmt.Sprintf("The news has a total of %d pictures", counts), data)
 				// 从远程抓取数据
-			} else if len(sources) == 0 || updateFlag == true {
+			} else if len(sources) == 0 || updateFlag {
 				// 去掉 ?update 后缀的真实地址
 				newurl := urlUpdate[0]
 				imgURLs := services.PicData(urlType, newurl)
