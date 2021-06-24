@@ -33,9 +33,9 @@ func Radiko(c *gin.Context) {
 		if len(rData) != 0 {
 			data := map[string]interface{}{
 				"entities": map[string]interface{}{
-					"name": rData["name"],
-					"url":  rData["url"],
-					"cache":    true,
+					"name":  rData["name"],
+					"url":   rData["url"],
+					"cache": true,
 				},
 			}
 			DataHandler(c, 0, station, data)
