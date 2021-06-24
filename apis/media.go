@@ -24,7 +24,8 @@ func Media(c *gin.Context) {
 				updateFlag = true
 			}
 			// 从数据库获取数据
-			sources, counts := services.MediaFromDB(url)
+			newurl := urlUpdate[0]
+			sources, counts := services.MediaFromDB(newurl)
 			if len(sources) != 0 && !updateFlag {
 				imgURLs := sources["source"]
 
@@ -37,7 +38,6 @@ func Media(c *gin.Context) {
 				// 从远程抓取数据
 			} else if len(sources) == 0 || updateFlag {
 				// 去掉 ?update 后缀的真实地址
-				newurl := urlUpdate[0]
 				imgURLs := services.PicData(urlType, newurl)
 				if len(imgURLs) != 0 {
 					services.Media2DB(mtype, urlType, newurl, imgURLs)
