@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"qmaru-api/configs"
+	"qmaru-api/gclient"
 	"qmaru-api/models"
 	"qmaru-api/utils"
 
@@ -153,16 +154,11 @@ func mdprAPI(url string) (imgs []interface{}) {
 
 // igAPI 抓取网页版数据
 func igAPI(url string) (imgs []interface{}) {
-	var extCfg = configs.ExtCfg()
-	var apiURL = extCfg["api-ig"].(string)
+	urls := gclient.RPCData(url)
 
-	params := utils.MiniParams{"url": url}
-	res := utils.Minireq.Get(apiURL, params)
-
-	resJSON := res.RawJSON().(map[string]interface{})
-	if resJSON["status"].(float64) == 1 {
-		imgs = resJSON["data"].([]interface{})
-		return
+	imgs = make([]interface{}, len(urls))
+	for i, v := range urls {
+		imgs[i] = v
 	}
 	return
 }

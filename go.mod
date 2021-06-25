@@ -12,4 +12,6 @@ require (
 	github.com/sirupsen/logrus v1.8.0
 	github.com/stretchr/testify v1.6.1 // indirect
 	golang.org/x/text v0.3.3 // indirect
+	google.golang.org/grpc v1.38.0
+	google.golang.org/protobuf v1.26.0
 )
