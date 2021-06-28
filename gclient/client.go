@@ -19,7 +19,8 @@ func RPCData(url string) []string {
 
 	conn, err := grpc.DialContext(ctx, BindAddress, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Panicf("Connect Failed: %v", err)
+		return []string{}
 	}
 	defer conn.Close()
 	c := NewInstaMediaClient(conn)
@@ -28,7 +29,8 @@ func RPCData(url string) []string {
 		shareURL := url
 		r, err := c.GetMedia(ctx, &ShareURL{Url: shareURL})
 		if err != nil {
-			log.Fatalf("could not greet: %v", err)
+			log.Panicf("Client Error: %v", err)
+			return []string{}
 		}
 		return r.GetUrls()
 	}
