@@ -27,12 +27,15 @@ func RPCData(url string) []string {
 
 	if url != "" {
 		shareURL := url
-		r, err := c.GetMedia(ctx, &ShareURL{Url: shareURL})
+		res, err := c.GetMedia(ctx, &ShareURL{
+			Url:  shareURL,
+			Code: "Instago",
+		})
 		if err != nil {
 			log.Panicf("Client Error: %v", err)
 			return []string{}
 		}
-		return r.GetUrls()
+		return res.GetUrls()
 	}
 	return []string{}
 }
