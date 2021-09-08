@@ -35,17 +35,17 @@ type DLServer struct {
 
 // RadioData 请求参数
 type RadioData struct {
-	stationID string
-	startAt   string
-	endAt     string
-	ft        string
-	to        string
-	l         string
-	rtype     string
+	StationID string
+	StartAt   string
+	EndAt     string
+	Ft        string
+	To        string
+	L         string
+	Rtype     string
 }
 
-// encodeKey 根据偏移长度生成 KEY
-func encodeKey(authkey string, offset int64, length int64) (partialkey string) {
+// EncodeKey 根据偏移长度生成 KEY
+func EncodeKey(authkey string, offset int64, length int64) (partialkey string) {
 	reader := strings.NewReader(authkey)
 	buff := make([]byte, length)
 	_, err := reader.ReadAt(buff, offset)
@@ -69,23 +69,23 @@ func encodeKey(authkey string, offset int64, length int64) (partialkey string) {
 // 	return
 // }
 
-// radikoChunklist 提取播放地址
-func radikoChunklist(playlist string) (url string) {
-	regURLRule := regexp.MustCompile(`https://.*?\.m3u8`)
+// RadikoChunklist 提取播放地址
+func RadikoChunklist(playlist string) (url string) {
+	regURLRule := regexp.MustCompile(`https://.*?medialist.*`)
 	urlList := regURLRule.FindAllString(playlist, -1)
 	url = urlList[0]
 	return
 }
 
-// radikoAAC 提取 AAC 文件的地址
-func radikoAAC(m3u8 string) (urls []string) {
+// RadikoAAC 提取 AAC 文件的地址
+func RadikoAAC(m3u8 string) (urls []string) {
 	regURLRule := regexp.MustCompile(`https://.*?\.aac`)
 	urls = regURLRule.FindAllString(m3u8, -1)
 	return
 }
 
-// radikoAuth1 获取 token / offset / length
-func radikoAuth1() (token string, offset int64, length int64) {
+// RadikoAuth1 获取 token / offset / length
+func RadikoAuth1() (token string, offset int64, length int64) {
 	auth1URL := "https://radiko.jp/v2/api/auth1"
 	headers := utils.MiniHeaders{
 		"User-Agent":           utils.UserAgent,
@@ -106,8 +106,8 @@ func radikoAuth1() (token string, offset int64, length int64) {
 	return
 }
 
-// radikoAuth2 获取地区代码
-func radikoAuth2(token string, partialkey string) (areaid string) {
+// RadikoAuth2 获取地区代码
+func RadikoAuth2(token string, partialkey string) (areaid string) {
 	auth2URL := "https://radiko.jp/v2/api/auth2"
 
 	headers := utils.MiniHeaders{
@@ -124,9 +124,9 @@ func radikoAuth2(token string, partialkey string) (areaid string) {
 	return
 }
 
-// radikoHLS 获取 AAC 下载地址
-func radikoHLS(token string, areaid string, radioData *RadioData) (aacURLs []string) {
-	playlistURL := "https://radiko.jp/v2/api/ts/playlist.m3u8"
+// RadikoHLS 获取 AAC 下载地址
+func RadikoHLS(token string, areaid string, radioData *RadioData) (aacURLs []string) {
+	playlistURL := "https://tf-rpaa.smartstream.ne.jp/tf/playlist.m3u8"
 
 	headers := utils.MiniHeaders{
 		"User-Agent":         utils.UserAgent,
@@ -135,24 +135,25 @@ func radikoHLS(token string, areaid string, radioData *RadioData) (aacURLs []str
 	}
 
 	params := utils.MiniParams{
-		"station_id": radioData.stationID,
-		"start_at":   radioData.startAt,
-		"ft":         radioData.ft,
-		"end_at":     radioData.endAt,
-		"to":         radioData.to,
-		"l":          radioData.l,
-		"type":       radioData.rtype,
+		"station_id": radioData.StationID,
+		"start_at":   radioData.StartAt,
+		"ft":         radioData.Ft,
+		"end_at":     radioData.EndAt,
+		"to":         radioData.To,
+		"l":          radioData.L,
+		"lsid":       "cc7f113153768625971aa07c47a18fb5",
+		"type":       radioData.Rtype,
 	}
 
 	chunklistRes := utils.Minireq.Get(playlistURL, headers, params)
-	chunklistURL := radikoChunklist(string(chunklistRes.RawData()))
+	chunklistURL := RadikoChunklist(string(chunklistRes.RawData()))
 
 	m3u8ReqHeaders := utils.MiniHeaders{
 		"User-Agent": utils.UserAgent,
 	}
 
 	m3u8Res := utils.Minireq.Get(chunklistURL, m3u8ReqHeaders)
-	aacURLs = radikoAAC(string(m3u8Res.RawData()))
+	aacURLs = RadikoAAC(string(m3u8Res.RawData()))
 	if len(aacURLs) == 0 {
 		aacURLs = []string{}
 	}
@@ -242,19 +243,19 @@ func RadioGet(fileName, station, startAt, endAt string) (dlurl string) {
 	authkey := "bcd151073c03b352e1ef2fd66c32209da9ca0afa"
 
 	radioData := new(RadioData)
-	radioData.stationID = station
-	radioData.startAt = startAt
-	radioData.endAt = endAt
-	radioData.ft = startAt
-	radioData.to = endAt
-	radioData.l = "15"
-	radioData.rtype = "b"
+	radioData.StationID = station
+	radioData.StartAt = startAt
+	radioData.EndAt = endAt
+	radioData.Ft = startAt
+	radioData.To = endAt
+	radioData.L = "15"
+	radioData.Rtype = "b"
 
-	token, offset, length := radikoAuth1()
-	partialkey := encodeKey(authkey, offset, length)
-	area := radikoAuth2(token, partialkey)
+	token, offset, length := RadikoAuth1()
+	partialkey := EncodeKey(authkey, offset, length)
+	area := RadikoAuth2(token, partialkey)
 	if area != "OUT" {
-		aacURLs := radikoHLS(token, area, radioData)
+		aacURLs := RadikoHLS(token, area, radioData)
 		if len(aacURLs) != 0 {
 			mediaInfo := configs.MediaCfg()
 			mediaPath := mediaInfo["media_path"].(string)
