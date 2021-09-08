@@ -141,7 +141,7 @@ func RadikoHLS(token string, areaid string, radioData *RadioData) (aacURLs []str
 		"end_at":     radioData.EndAt,
 		"to":         radioData.To,
 		"l":          radioData.L,
-		"lsid":       "cc7f113153768625971aa07c47a18fb5",
+		"lsid":       "AAM_UUID",
 		"type":       radioData.Rtype,
 	}
 
@@ -152,10 +152,21 @@ func RadikoHLS(token string, areaid string, radioData *RadioData) (aacURLs []str
 		"User-Agent": utils.UserAgent,
 	}
 
-	m3u8Res := utils.Minireq.Get(chunklistURL, m3u8ReqHeaders)
-	aacURLs = RadikoAAC(string(m3u8Res.RawData()))
-	if len(aacURLs) == 0 {
-		aacURLs = []string{}
+	for {
+		ut := time.Now().UnixMilli()
+		chunkURL := fmt.Sprintf("%s&_=%d", chunklistURL, ut)
+		m3u8Res := utils.Minireq.Get(chunkURL, m3u8ReqHeaders)
+		aacURL := RadikoAAC(string(m3u8Res.RawData()))
+		if len(aacURL) == 0 {
+			aacURLs = aacURLs[0 : len(aacURLs)-2]
+			break
+		}
+		if len(aacURLs) == 0 {
+			aacURLs = append(aacURLs, aacURL...)
+		} else {
+			aacURLs = append(aacURLs, aacURL[len(aacURL)-1])
+		}
+		time.Sleep(time.Duration(time.Second * 5))
 	}
 	return
 }
@@ -171,8 +182,8 @@ func rThread(url string, ch chan []byte, dl *DLServer) {
 	ch <- res.RawData()
 }
 
-// rEngine 下载器
-func rEngine(urls []string, savePath string) {
+// RMultiple 多线程下载
+func RMultiple(urls []string, savePath string) {
 	aacFile, _ := os.OpenFile(savePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	total := float64(len(urls))
 	var thread int
@@ -204,6 +215,18 @@ func rEngine(urls []string, savePath string) {
 	}
 
 	dl.WG.Wait()
+	defer aacFile.Close()
+}
+
+// RSingle 单线程下载
+func RSingle(urls []string, savePath string) {
+	aacFile, _ := os.OpenFile(savePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	for _, url := range urls {
+		res := utils.Minireq.Get(url)
+		audioBytes := res.RawData()
+		offset, _ := aacFile.Seek(0, os.SEEK_END)
+		aacFile.WriteAt(audioBytes, offset)
+	}
 	defer aacFile.Close()
 }
 
@@ -262,7 +285,7 @@ func RadioGet(fileName, station, startAt, endAt string) (dlurl string) {
 			wwwPath := mediaInfo["www_path"].(string)
 
 			savePath := filepath.Join(mediaPath, fileName)
-			rEngine(aacURLs, savePath)
+			RSingle(aacURLs, savePath)
 			dlurl = filepath.Join(wwwPath, fileName)
 		} else {
 			dlurl = ""
